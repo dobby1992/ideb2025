@@ -1,0 +1,1 @@
+git commit --allow-empty-message -m "" 2>/dev/null; touch .nojekyll && git add .nojekyll && git commit -m "desativa jekyll no pages" && git push
