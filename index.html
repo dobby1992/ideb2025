@@ -362,6 +362,12 @@ tbody tr{cursor:pointer}
 .semdado-nota{margin:-4px 0 14px;font-size:12.5px;line-height:1.5;color:var(--muted);
   background:#FAEFD5;border-left:4px solid var(--marker);border-radius:8px;padding:9px 12px}
 .semdado-nota b{color:var(--ink)}
+.aviso-mx{margin:-4px 0 10px;font-size:12.5px;font-weight:600;color:var(--ink);
+  background:var(--card);border:1.5px solid var(--marker);border-radius:8px;padding:8px 12px;
+  display:inline-block;animation:surge .2s ease-out}
+@keyframes surge{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.pill.novo{animation:pisca 1.6s ease-out}
+@keyframes pisca{0%,40%{box-shadow:0 0 0 3px var(--marker)}100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
 .pill.vazio{opacity:.65;border-style:dashed}
 .pill .tag{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .leitura{padding:16px 18px 6px}
@@ -760,13 +766,14 @@ footer p b{color:var(--ink)}
         <select id="mx-rede"><option value="M">Municipal</option><option value="P">Pública</option><option value="E">Estadual</option></select></div>
       <div class="field"><label for="mx-base">Período</label>
         <select id="mx-base"><option value="2023">2023 → 2025</option><option value="2019">2019 → 2025</option></select></div>
-      <div class="field"><label for="mx-eixo">Eixo vertical</label>
-        <select id="mx-eixo"><option value="ideb">IDEB de 2025</option><option value="esp">IDEB acima do esperado pelo INSE</option></select></div>
       <div class="field"><label for="mx-ref">Comparar com</label>
         <select id="mx-ref"><option value="BR">Brasil</option><option value="UF">O estado selecionado</option></select></div>
       <div class="field"><label for="mx-so">Exibição</label>
         <label class="check"><input type="checkbox" id="mx-so"> Só os destacados</label></div>
     </div>
+    <p class="aviso-mx" id="mxaviso" hidden=""></p>
+    <div class="chips" id="mxchips" style="margin:-4px 0 14px"></div>
+    <p class="semdado-nota" id="mxsemdado" hidden=""></p>
     <div class="comoler">
       <b>Como ler.</b> Cada ponto é uma rede municipal.
       No eixo <b>vertical</b> está o <b>IDEB de 2025</b>: quanto mais alto o ponto, maior o IDEB da rede hoje.
@@ -783,8 +790,6 @@ footer p b{color:var(--ink)}
       <div class="legend" id="mxlegend"></div>
       <div class="rank" id="mxinfo"></div>
     </div>
-    <div class="chips" id="mxchips" style="margin-top:16px"></div>
-    <p class="semdado-nota" id="mxsemdado" hidden=""></p>
     <div class="card mini leitura" id="mxleitura" hidden=""></div>
     <div class="tablewrap" id="mxtabela" hidden=""><table>
       <thead><tr><th>Município</th><th class="num">IDEB 2025</th><th class="num">Variação</th>
@@ -1285,7 +1290,7 @@ function drawChart(svg, series, opts){
 }
 
 /* ------------ aba: consultar município ------------ */
-var estado = {sel:null, rede:{AI:'M', AF:'M', EM:'E'}, medias:{AI:false, AF:false, EM:false}, comp:[], mat:[], base:2023};
+var estado = {sel:null, rede:{AI:'M', AF:'M', EM:'E'}, medias:{AI:false, AF:false, EM:false}, comp:[], mat:[], matNovo:null, base:2023};
 
 function renderCidade(){
   var box=document.getElementById('cityView');
@@ -1897,7 +1902,7 @@ function renderMatriz(){
   var escopoRef = (document.getElementById('mx-ref').value==='UF' && uf) ? uf : 'BR';
   var refNome = escopoRef==='BR' ? 'Brasil' : escopoRef;
   var refTxt  = escopoRef==='BR' ? 'do Brasil' : 'de '+escopoRef;
-  var eixo=document.getElementById('mx-eixo').value;
+  var eixo='ideb';
   MODO_ESP = (eixo==='esp');
   var pts=pontosMatriz(etapa, rede, base, uf, eixo);
   var svg=document.getElementById('mxchart');
@@ -2043,6 +2048,7 @@ function renderMatriz(){
     pill.innerHTML='<i style="background:'+cor+'"></i>'+m.nome+' <span style="color:#6B7A8C;font-weight:500">'+m.uf+'</span>'+
       (pAux?'':' <span class="tag">sem dado</span>');
     if(!pAux) semDado.push(m.nome);
+    if(code===estado.matNovo){ pill.classList.add('novo'); }
     var bx2=document.createElement('button'); bx2.textContent='×'; bx2.setAttribute('aria-label','Remover '+m.nome);
     bx2.onclick=function(){ estado.mat=estado.mat.filter(function(c){return c!==code;}); renderMatriz(); };
     pill.appendChild(bx2); chips.appendChild(pill);
@@ -2289,10 +2295,18 @@ function renderMatriz(){
     '<p>Entre as que avançaram no período, <b>'+porAprov+'</b> avançaram mais por aprovação do que por aprendizagem, e <b>'+soFluxo+'</b> subiram apesar de a nota do Saeb ter caído ou ficado parada.</p>';
 }
 
+function avisoMatriz(txt){
+  var el=document.getElementById('mxaviso');
+  if(!el) return;
+  el.textContent=txt;
+  el.hidden=false;
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){ el.hidden=true; }, 3200);
+}
 function setupMatriz(){
   var ufSel=document.getElementById('mx-uf');
   IDX.ufs.forEach(function(u){ var o=document.createElement('option'); o.value=u; o.textContent=u; ufSel.appendChild(o); });
-  ['mx-uf','mx-etapa','mx-rede','mx-base','mx-so','mx-ref','mx-eixo'].forEach(function(id){
+  ['mx-uf','mx-etapa','mx-rede','mx-base','mx-so','mx-ref'].forEach(function(id){
     document.getElementById(id).addEventListener('change', renderMatriz);
   });
   var inp=document.getElementById('mx-q');
@@ -2301,8 +2315,17 @@ function setupMatriz(){
     var achou = mm ? IDX.list.find(function(m){return m.nome===mm[1] && m.uf===mm[2];})
                    : IDX.list.find(function(m){return norm(m.nome)===norm(v);});
     if(achou){
-      if(estado.mat.indexOf(achou.code)<0 && estado.mat.length<5) estado.mat.push(achou.code);
-      inp.value=''; renderMatriz();
+      var novo = estado.mat.indexOf(achou.code)<0 && estado.mat.length<5;
+      if(novo){ estado.mat.push(achou.code); estado.matNovo=achou.code; }
+      inp.value='';
+      renderMatriz();
+      /* com a lista logo acima, o acerto se vê sozinho; só avisamos quando nada entra */
+      if(!novo){
+        avisoMatriz(estado.mat.indexOf(achou.code)>=0
+          ? achou.nome+' já estava na lista.'
+          : 'Limite de 5 municípios. Remova um para incluir outro.');
+      }
+      setTimeout(function(){ estado.matNovo=null; }, 2200);
     }
   });
   renderMatriz();
