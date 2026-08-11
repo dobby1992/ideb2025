@@ -362,9 +362,12 @@ tbody tr{cursor:pointer}
 .semdado-nota{margin:-4px 0 14px;font-size:12.5px;line-height:1.5;color:var(--muted);
   background:#FAEFD5;border-left:4px solid var(--marker);border-radius:8px;padding:9px 12px}
 .semdado-nota b{color:var(--ink)}
-.aviso-mx{margin:-4px 0 10px;font-size:12.5px;font-weight:600;color:var(--ink);
-  background:var(--card);border:1.5px solid var(--marker);border-radius:8px;padding:8px 12px;
-  display:inline-block;animation:surge .2s ease-out}
+.aviso-mx{margin:0 0 14px;font-size:12.5px;font-weight:600;color:var(--ink);
+  background:var(--card);border:1.5px solid var(--marker);border-radius:8px;padding:9px 13px;
+  display:inline-block;animation:surge .2s ease-out;transition:opacity .45s ease,transform .45s ease}
+.aviso-mx.sai{opacity:0;transform:translateY(-4px)}
+.aviso-mx[hidden]{display:none}
+[hidden]{display:none !important}
 @keyframes surge{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .pill.novo{animation:pisca 1.6s ease-out}
 @keyframes pisca{0%,40%{box-shadow:0 0 0 3px var(--marker)}100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
@@ -558,7 +561,16 @@ tbody tr:hover{background:#F8F6F2}
 
 /* chips */
 .pill{border-radius:999px;padding:8px 10px 8px 15px;border-color:#E3DFD7}
-.chips{gap:10px;margin-bottom:22px}
+.chips{gap:10px 12px;margin-bottom:22px}
+.leitura{padding:20px 22px 10px}
+.leitura h3{padding:0 0 6px}
+.leitura p{margin-bottom:16px}
+.leitura p+p{padding-top:16px}
+.leitura p.chave{padding:12px 14px;margin-bottom:18px}
+#mxleitura,#mxtabela{margin-top:22px}
+.comoler{padding:16px 20px;line-height:1.65}
+#mxlegend{padding-bottom:12px;row-gap:8px}
+#mxinfo{padding-bottom:18px}
 
 /* rodapé */
 footer{margin-top:56px;padding-top:28px;border-top-color:#E3DFD7;line-height:1.7}
@@ -772,7 +784,7 @@ footer p b{color:var(--ink)}
         <label class="check"><input type="checkbox" id="mx-so"> Só os destacados</label></div>
     </div>
     <p class="aviso-mx" id="mxaviso" hidden=""></p>
-    <div class="chips" id="mxchips" style="margin:-4px 0 14px"></div>
+    <div class="chips" id="mxchips" style="margin:0 0 18px"></div>
     <p class="semdado-nota" id="mxsemdado" hidden=""></p>
     <div class="comoler">
       <b>Como ler.</b> Cada ponto é uma rede municipal.
@@ -1345,11 +1357,12 @@ function renderPanorama(box){
   }).join('');
   box.appendChild(g);
 
+  var rkAI=rankingFor('AI','M',ai);
   var top=rkAI.arr.slice(0,10);
   var altas=rkAI.arr.filter(function(o){return o.delta!=null;}).slice().sort(function(a,b){return b.delta-a.delta;}).slice(0,10);
   var g2=document.createElement('div'); g2.className='grid2 fade';
-  g2.appendChild(miniLista('Maiores IDEB 2025 · anos iniciais', top, 'ideb'));
-  g2.appendChild(miniLista('Maiores altas desde 2023 · anos iniciais', altas, 'delta'));
+  g2.appendChild(miniLista('Maiores IDEB 2025 · anos iniciais, rede municipal', top, 'ideb'));
+  g2.appendChild(miniLista('Maiores altas desde 2023 · anos iniciais, rede municipal', altas, 'delta'));
   box.appendChild(g2);
 }
 
@@ -2037,7 +2050,7 @@ function renderMatriz(){
   /* municípios destacados */
   var chips=document.getElementById('mxchips'), linhas=[], leituras=[], semDado=[];
   chips.innerHTML = estado.mat.length ? '' :
-    '<p class="empty-hint" style="padding:0">Nenhum município destacado. Use a busca acima, ou clique num ponto do gráfico, para comparar até 5 municípios com o Brasil.</p>';
+    '<p class="empty-hint" style="padding:0">Nenhum município destacado. Use a busca acima, ou clique num ponto do gráfico, para comparar até 10 municípios com a referência.</p>';
   estado.mat.forEach(function(code,i){
     var m=IDX.byCode[code];
     var pAux=pts.find(function(o){return o.code===code;});
@@ -2250,7 +2263,7 @@ function renderMatriz(){
     if(melhor && dist<900){
       var k=estado.mat.indexOf(melhor.code);
       if(k>=0) estado.mat.splice(k,1);
-      else if(estado.mat.length<5) estado.mat.push(melhor.code);
+      else if(estado.mat.length<10) estado.mat.push(melhor.code);
       renderMatriz();
     }
   };
@@ -2299,9 +2312,11 @@ function avisoMatriz(txt){
   var el=document.getElementById('mxaviso');
   if(!el) return;
   el.textContent=txt;
+  el.classList.remove('sai');
   el.hidden=false;
-  clearTimeout(el._t);
-  el._t=setTimeout(function(){ el.hidden=true; }, 3200);
+  clearTimeout(el._t); clearTimeout(el._t2);
+  el._t=setTimeout(function(){ el.classList.add('sai'); }, 2800);
+  el._t2=setTimeout(function(){ el.hidden=true; el.classList.remove('sai'); }, 3300);
 }
 function setupMatriz(){
   var ufSel=document.getElementById('mx-uf');
@@ -2315,15 +2330,14 @@ function setupMatriz(){
     var achou = mm ? IDX.list.find(function(m){return m.nome===mm[1] && m.uf===mm[2];})
                    : IDX.list.find(function(m){return norm(m.nome)===norm(v);});
     if(achou){
-      var novo = estado.mat.indexOf(achou.code)<0 && estado.mat.length<5;
-      if(novo){ estado.mat.push(achou.code); estado.matNovo=achou.code; }
+      var novo = estado.mat.indexOf(achou.code)<0 && estado.mat.length<10;
+      if(novo) estado.mat.push(achou.code);
+      if(estado.mat.indexOf(achou.code)>=0) estado.matNovo=achou.code;
       inp.value='';
       renderMatriz();
-      /* com a lista logo acima, o acerto se vê sozinho; só avisamos quando nada entra */
-      if(!novo){
-        avisoMatriz(estado.mat.indexOf(achou.code)>=0
-          ? achou.nome+' já estava na lista.'
-          : 'Limite de 5 municípios. Remova um para incluir outro.');
+      /* repetido apenas destaca de novo a etiqueta; aviso só quando o limite impede */
+      if(!novo && estado.mat.indexOf(achou.code)<0){
+        avisoMatriz('Limite de 10 municípios. Remova um para incluir outro.');
       }
       setTimeout(function(){ estado.matNovo=null; }, 2200);
     }
